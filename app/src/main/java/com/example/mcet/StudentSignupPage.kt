@@ -14,36 +14,33 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun FacultyLoginPage(navController: NavController) {
+fun StudentSignupPage(navController: NavController) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Background Image
         Image(
-            painter = painterResource(id = R.drawable.fs), // Replace with your actual background image
+            painter = painterResource(id = R.drawable.fs),
             contentDescription = "Background Image",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
 
-        // Centered Login Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -55,29 +52,29 @@ fun FacultyLoginPage(navController: NavController) {
                 imageVector = Icons.Default.AccountCircle,
                 contentDescription = "Account Icon",
                 modifier = Modifier.size(80.dp),
-                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFF000000))
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.Black)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "FACULTY",
-                fontSize = 32.sp,
+                "STUDENT SIGNUP",
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF000000),
+                color = Color.Black,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            FacultyLoginForm(navController)
+            StudentSignupForm(navController)
         }
     }
 }
 
 @Composable
-fun FacultyLoginForm(navController: NavController) {
-    var username by remember { mutableStateOf(TextFieldValue()) }
+fun StudentSignupForm(navController: NavController) {
+    val context = LocalContext.current
+    var studentId by remember { mutableStateOf(TextFieldValue()) }
     var password by remember { mutableStateOf(TextFieldValue()) }
     var passwordVisible by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -87,13 +84,13 @@ fun FacultyLoginForm(navController: NavController) {
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Log in to your account", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        Text("Create a new student account", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
+            value = studentId,
+            onValueChange = { studentId = it },
+            label = { Text("Student ID (email)") },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -102,7 +99,7 @@ fun FacultyLoginForm(navController: NavController) {
             ),
             singleLine = true,
             leadingIcon = {
-                Icon(imageVector = Icons.Default.AccountCircle, contentDescription = "User Icon", tint = Color(0xFF000000))
+                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = Color.Black)
             }
         )
 
@@ -113,84 +110,59 @@ fun FacultyLoginForm(navController: NavController) {
             onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val icon = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(icon, contentDescription = null)
+                }
+            },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color(0xFF1E8C5A),
                 unfocusedIndicatorColor = Color.Gray
             ),
-            singleLine = true,
-            trailingIcon = {
-                val image = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, contentDescription = "Toggle Password Visibility")
-                }
-            }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            "Forgot Password?",
-            textAlign = TextAlign.End,
-            modifier = Modifier.fillMaxWidth(),
-            color = Color(0xFF1E8C5A)
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val context = LocalContext.current
-        val auth = remember { FirebaseAuth.getInstance() } // <-- Add this near top inside FacultyLoginForm
-
         Button(
             onClick = {
-                val email = username.text.trim()
-                val pass = password.text.trim()
+                val emailText = studentId.text.trim()
+                val passwordText = password.text.trim()
 
-                if (email.isNotEmpty() && pass.isNotEmpty()) {
-                    FirebaseAuth.getInstance()
-                        .signInWithEmailAndPassword(email, pass)
+                if (emailText.isNotEmpty() && passwordText.isNotEmpty()) {
+                    FirebaseAuth.getInstance().createUserWithEmailAndPassword(emailText, passwordText)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                                navController.navigate("facultyHome")
+                                Toast.makeText(context, "Signup successful!", Toast.LENGTH_SHORT).show()
+                                navController.navigate("studentLogin")
                             } else {
-                                val errorMsg = when (task.exception?.message) {
-                                    null -> "Login failed. Please try again."
-                                    else -> {
-                                        if (task.exception?.message?.contains("network error", ignoreCase = true) == true) {
-                                            "No internet connection. Please check your network."
-                                        } else {
-                                            "Invalid credentials. Please try again."
-                                        }
-                                    }
-                                }
-                                Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Signup failed: ${task.exception?.localizedMessage}", Toast.LENGTH_SHORT).show()
                             }
                         }
                 } else {
-                    Toast.makeText(context, "Please enter both email and password.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please enter email and password.", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E8C5A))
         ) {
-            Text("Login", color = Color.White)
+            Text("Sign Up", color = Color.White)
         }
-
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Don't have an account? Sign up",
+            "Already have an account? Login",
             color = Color(0xFF1E8C5A),
+            textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    navController.navigate("facultySignup")
-                },
-            textAlign = TextAlign.Center
+                    navController.navigate("studentLogin")
+                }
         )
-
     }
 }

@@ -2,6 +2,7 @@ package com.example.mcet
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun StudentLoginPage(navController: NavController) {
@@ -143,13 +145,31 @@ fun LoginForm(navController: NavController) {
 
         Button(
             onClick = {
-                if (studentId.text == "226E1A0517" && password.text == "10092004") {
-                    Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                    navController.navigate("studentHome") // Navigate to Student Home
+                val email = studentId.text.trim()
+                val pass = password.text.trim()
+
+                if (email.isNotEmpty() && pass.isNotEmpty()) {
+                    FirebaseAuth.getInstance()
+                        .signInWithEmailAndPassword(email, pass)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+                                navController.navigate("studentHome")
+                            } else {
+                                val error = when {
+                                    task.exception?.message?.contains("network", ignoreCase = true) == true -> {
+                                        "No internet connection. Please check your network."
+                                    }
+                                    else -> "Invalid Credentials"
+                                }
+                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                            }
+                        }
                 } else {
-                    Toast.makeText(context, "Invalid Credentials", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please enter Student ID and Password.", Toast.LENGTH_SHORT).show()
                 }
-            },
+            }
+            ,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E8C5A))
         ) {
@@ -161,9 +181,14 @@ fun LoginForm(navController: NavController) {
         Text(
             "Don't have an account? Sign up",
             color = Color(0xFF1E8C5A),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    navController.navigate("studentSignup")
+                },
             textAlign = TextAlign.Center
         )
+
     }
 }
 

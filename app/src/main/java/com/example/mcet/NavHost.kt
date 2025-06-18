@@ -29,6 +29,12 @@ fun MetApp() {
         composable("facultyHome") {
             FacultyHomePage(navController)
         }
+        composable("facultySignup") {
+            FacultySignupPage(navController)
+        }
+        composable("studentSignup") {
+            StudentSignupPage(navController)
+        }
     }
 }
 
