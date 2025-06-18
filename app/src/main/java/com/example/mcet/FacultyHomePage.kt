@@ -14,18 +14,65 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacultyHomePage(navController: NavController) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            SidebarDrawerContent(
+                navController = navController,
+                closeDrawer = { scope.launch { drawerState.close() } }
+            )
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                SmallTopAppBar(
+                    title = { Text("Faculty Dashboard", fontSize = 20.sp) },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            scope.launch { drawerState.open() }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Menu",
+                                tint = Color.Black
+                            )
+                        }
+                    }
+                )
+            },
+            content = { padding ->
+                FacultyDashboardContent(padding, navController)
+            }
+        )
+    }
+
+}
+
+
+
+@Composable
+fun FacultyDashboardContent(padding: PaddingValues, navController: NavController) {
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(Color(0xFFB2EBF2), Color(0xFFE0F7FA))
@@ -33,7 +80,7 @@ fun FacultyHomePage(navController: NavController) {
             )
     ) {
         Image(
-            painter = painterResource(id = R.drawable.fs),  // Add image in res/drawable
+            painter = painterResource(id = R.drawable.fs),
             contentDescription = "Background",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -44,15 +91,6 @@ fun FacultyHomePage(navController: NavController) {
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            SmallTopAppBar(
-                title = { Text("Faculty Dashboard", fontSize = 20.sp) },
-                navigationIcon = {
-                    IconButton(onClick = { /* Open Drawer */ }) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu", tint = Color.Black)
-                    }
-                }
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
 
             val facultyInfo = listOf(
@@ -111,7 +149,7 @@ fun FacultyProfiles() {
                             modifier = Modifier.padding(8.dp)
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.baseline_account_circle_24), // Add profile image in res/drawable
+                                painter = painterResource(id = R.drawable.baseline_account_circle_24),
                                 contentDescription = "Profile",
                                 modifier = Modifier
                                     .size(60.dp)
@@ -166,7 +204,7 @@ fun ExamTimetable() {
     }
 }
 
-data class FacultyCardData(val title: String, val value: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+data class FacultyCardData(val title: String, val value: String, val icon: ImageVector)
 
 data class ExamSchedule(val date: String, val subject: String, val time: String)
 
