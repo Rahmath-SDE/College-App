@@ -2,11 +2,11 @@ package com.example.mcet
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,44 +19,67 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentHomePage(navController: NavController) {
-    Box(
-        modifier = Modifier.fillMaxSize()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    StudentSidebarDrawer(
+        navController = navController,
+        drawerState = drawerState,
+        closeDrawer = { scope.launch { drawerState.close() } }
     ) {
-        // Background Image
+        Scaffold(
+            topBar = {
+                SmallTopAppBar(
+                    title = { Text("Welcome Student", fontSize = 20.sp) },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            scope.launch { drawerState.open() }
+                        }) {
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu", tint = Color.Black)
+                        }
+                    },
+                    colors = TopAppBarDefaults.smallTopAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.Black
+                    )
+                )
+            },
+            content = { padding ->
+                StudentHomePageContent(padding)
+            }
+        )
+    }
+}
+
+@Composable
+fun StudentHomePageContent(padding: PaddingValues) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+    ) {
         Image(
-            painter = painterResource(id = R.drawable.fs), // Place an image in res/drawable
+            painter = painterResource(id = R.drawable.fs),
             contentDescription = "Background",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
 
-        // Main Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White.copy(alpha = 0.8f)) // White overlay for readability
+                .background(Color.White.copy(alpha = 0.8f))
                 .padding(16.dp)
         ) {
-            SmallTopAppBar(
-                title = { Text("Welcome Student", fontSize = 20.sp) },
-                navigationIcon = {
-                    IconButton(onClick = { /* Open Drawer */ }) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu", tint = Color.Black)
-                    }
-                },
-                colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.Black
-                )
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
 
             val profileInfo = listOf(
@@ -102,18 +125,13 @@ fun StudentHomePage(navController: NavController) {
 @Composable
 fun CalendarGrid() {
     val days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-    val dates = listOf(
-        "", "", "", "", "1", "2", "3",
-        "4", "5", "6", "7", "8", "9", "10",
-        "11", "12", "13", "14", "15", "16", "17",
-        "18", "19", "20", "21", "22", "23", "24",
-        "25", "26", "27", "28", "", "", ""
-    )
+    val dates = listOf("", "", "", "", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+        "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24",
+        "25", "26", "27", "28", "", "", "")
     val highlightedDates = setOf("3", "8", "12", "23")
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("February 2025", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyVerticalGrid(
@@ -126,9 +144,7 @@ fun CalendarGrid() {
         ) {
             items(days.size) { index ->
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(Color.LightGray),
+                    modifier = Modifier.size(48.dp).background(Color.LightGray),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(days[index], fontSize = 14.sp, fontWeight = FontWeight.Bold)

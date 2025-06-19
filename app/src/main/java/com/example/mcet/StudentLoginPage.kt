@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -36,11 +37,32 @@ fun StudentLoginPage(navController: NavController) {
     ) {
         // Background Image
         Image(
-            painter = painterResource(id = R.drawable.fs), // Replace with your image name
+            painter = painterResource(id = R.drawable.fs),
             contentDescription = "Background Image",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
+
+        // Back Button (top-left)
+        IconButton(
+            onClick = {
+                navController.navigate("selectRole") {
+                    popUpTo("StudentLogin") { inclusive = true }
+                }
+            },
+            modifier = Modifier
+                .padding(16.dp)
+                .size(40.dp)
+                .clip(RoundedCornerShape(50))
+                .background(Color(0xFF1E8C5A))
+                .align(Alignment.TopStart)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
+            )
+        }
 
         // Foreground Content - Centering the Login Box
         Column(

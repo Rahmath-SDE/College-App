@@ -3,6 +3,7 @@ package com.example.mcet
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -155,12 +156,16 @@ fun FacultySignupForm(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Already have an account? Login",
+            text = "Already have an account? Login",
             color = Color(0xFF1E8C5A),
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp)
+                .clickable {
+                    navController.navigate("facultyLogin") // Replace "login" with your actual login route
+                }
         )
+
     }
 }
