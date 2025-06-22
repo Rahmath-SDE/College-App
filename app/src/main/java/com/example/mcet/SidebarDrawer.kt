@@ -27,18 +27,28 @@ fun SidebarDrawerContent(
     val user = FirebaseAuth.getInstance().currentUser
 
     ModalDrawerSheet(
-        drawerContainerColor = Color(0xFFD0F0C0).copy(alpha = 0.7f) // translucent pastel green
+        drawerContainerColor = Color(0xFFBDE8C0).copy(alpha = 0.9f), // soft pastel green with more visibility
+        drawerTonalElevation = 4.dp
     ) {
         Spacer(modifier = Modifier.height(24.dp))
+
         Text(
-            "Menu",
-            modifier = Modifier.padding(16.dp),
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            color = Color.Black
+            "Navigation",
+            modifier = Modifier
+                .padding(start = 20.dp, bottom = 12.dp),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 22.sp,
+            color = Color(0xFF1B5E20) // deep green for header
         )
+
+        Divider(thickness = 1.dp, color = Color(0xFFB2DFDB).copy(alpha = 0.5f))
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         NavigationDrawerItem(
-            label = { Text("About") },
+            label = {
+                Text("About", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            },
             selected = false,
             onClick = {
                 Toast.makeText(
@@ -48,10 +58,16 @@ fun SidebarDrawerContent(
                 ).show()
                 closeDrawer()
             },
-            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+            icon = {
+                Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF388E3C))
+            },
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
+
         NavigationDrawerItem(
-            label = { Text("Help") },
+            label = {
+                Text("Help", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            },
             selected = false,
             onClick = {
                 Toast.makeText(
@@ -61,10 +77,16 @@ fun SidebarDrawerContent(
                 ).show()
                 closeDrawer()
             },
-            icon = { Icon(Icons.Default.Help, contentDescription = null) },
+            icon = {
+                Icon(Icons.Default.Help, contentDescription = null, tint = Color(0xFF388E3C))
+            },
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
+
         NavigationDrawerItem(
-            label = { Text("Logout") },
+            label = {
+                Text("Logout", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            },
             selected = false,
             onClick = {
                 FirebaseAuth.getInstance().signOut()
@@ -73,7 +95,15 @@ fun SidebarDrawerContent(
                     popUpTo("facultyHome") { inclusive = true }
                 }
             },
-            icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
+            icon = {
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = Color(0xFFD32F2F))
+            },
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Divider(thickness = 1.dp, color = Color(0xFFB2DFDB).copy(alpha = 0.5f))
     }
 }
+

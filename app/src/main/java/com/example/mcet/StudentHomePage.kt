@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,19 +18,54 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentHomePage(navController: NavController) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // 👇 Back press exit dialog state
+    val showExitDialog = remember { mutableStateOf(false) }
+
+    // 👇 Intercept system back button
+    androidx.activity.compose.BackHandler {
+        showExitDialog.value = true
+    }
+
+    // 👇 Show exit confirmation dialog
+    if (showExitDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog.value = false },
+            title = { Text("Exit App") },
+            text = { Text("Do you want to exit the app?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog.value = false
+                    android.os.Process.killProcess(android.os.Process.myPid()) // 👈 Exit app
+                }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog.value = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
 
     StudentSidebarDrawer(
         navController = navController,
@@ -59,6 +95,7 @@ fun StudentHomePage(navController: NavController) {
         )
     }
 }
+
 
 @Composable
 fun StudentHomePageContent(padding: PaddingValues) {
@@ -124,15 +161,74 @@ fun StudentHomePageContent(padding: PaddingValues) {
 
 @Composable
 fun CalendarGrid() {
-    val days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-    val dates = listOf("", "", "", "", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
-        "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24",
-        "25", "26", "27", "28", "", "", "")
-    val highlightedDates = setOf("3", "8", "12", "23")
+    val context = LocalContext.current
+    val firebaseAuth = FirebaseAuth.getInstance()
+    val userEmail = firebaseAuth.currentUser?.email?.replace(".", "_") ?: return
 
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("February 2025", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
+    val attendanceDates = remember { mutableStateListOf<String>() }
+    val eventMap = remember { mutableStateMapOf<String, List<String>>() }
+
+    val db = FirebaseDatabase.getInstance().reference
+    var selectedEvent by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
+
+    // ✅ Load attendance and event data
+    LaunchedEffect(userEmail) {
+        db.child("attendance").child(userEmail).get().addOnSuccessListener {
+            it.children.forEach { snap ->
+                val dateKey = snap.key ?: return@forEach
+                attendanceDates.add(dateKey)
+            }
+        }
+
+        db.child("events").get().addOnSuccessListener {
+            it.children.forEach { dateSnap ->
+                val date = dateSnap.key ?: return@forEach
+                val titles = dateSnap.children.mapNotNull {
+                    it.child("title").getValue(String::class.java)
+                }
+                eventMap[date] = titles
+            }
+        }
+    }
+
+    val today = LocalDate.now()
+    var selectedMonth by remember { mutableStateOf(today.monthValue) }
+    var selectedYear by remember { mutableStateOf(today.year) }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Month header
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        ) {
+            IconButton(onClick = {
+                if (selectedMonth == 1) {
+                    selectedMonth = 12
+                    selectedYear -= 1
+                } else {
+                    selectedMonth--
+                }
+            }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Previous")
+            }
+
+            val monthName = java.text.DateFormatSymbols().months[selectedMonth - 1]
+                .replaceFirstChar { it.uppercaseChar() }
+            Text("$monthName $selectedYear", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+
+            IconButton(onClick = {
+                if (selectedMonth == 12) {
+                    selectedMonth = 1
+                    selectedYear += 1
+                } else {
+                    selectedMonth++
+                }
+            }) {
+                Icon(Icons.Default.ArrowForward, contentDescription = "Next")
+            }
+        }
+
+        val dates = CalendarUtils.generateDatesForMonth(selectedYear, selectedMonth)
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
@@ -142,28 +238,69 @@ fun CalendarGrid() {
                 .background(Color.White)
                 .padding(8.dp)
         ) {
-            items(days.size) { index ->
-                Box(
-                    modifier = Modifier.size(48.dp).background(Color.LightGray),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(days[index], fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            items(listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")) { day ->
+                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    Text(day, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
-            items(dates.size) { index ->
-                val isHighlighted = dates[index] in highlightedDates
+
+            items(dates) { date ->
+                val dateString = date?.format(DateTimeFormatter.ISO_DATE)
+                val isAttended = dateString in attendanceDates
+                val events = eventMap[dateString] ?: emptyList()
+
+                val bgColor = when {
+                    isAttended && events.isNotEmpty() -> Color(0xFFB2DFDB) // Teal: both
+                    isAttended -> Color(0xFF81C784) // Green: attendance
+                    events.isNotEmpty() -> Color(0xFFFFF59D) // Yellow: event
+                    else -> Color.Transparent
+                }
+
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(if (isHighlighted) Color(0xFF81C784) else Color.White),
+                        .padding(2.dp)
+                        .background(bgColor, shape = RoundedCornerShape(8.dp))
+                        .clickable {
+                            if (!dateString.isNullOrEmpty() && events.isNotEmpty()) {
+                                selectedEvent = dateString to events
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(dates[index], fontSize = 16.sp)
+                    Text(
+                        text = date?.dayOfMonth?.toString() ?: "",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
+
+        // 🔹 Event Pop-up Dialog
+        selectedEvent?.let { (dateStr, titles) ->
+            AlertDialog(
+                onDismissRequest = { selectedEvent = null },
+                title = { Text("Events on $dateStr") },
+                text = {
+                    Column {
+                        titles.forEach { Text("• $it") }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { selectedEvent = null }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
     }
 }
+
+
+
+
+
 
 @Composable
 fun AcademicTable() {

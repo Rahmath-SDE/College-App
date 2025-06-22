@@ -32,6 +32,18 @@ import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun FacultyLoginPage(navController: NavController) {
+    val context = LocalContext.current
+
+    // ✅ Persistent login check
+    LaunchedEffect(Unit) {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user != null) {
+            navController.navigate("facultyHome") {
+                popUpTo("facultyLogin") { inclusive = true }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -93,6 +105,7 @@ fun FacultyLoginPage(navController: NavController) {
         }
     }
 }
+
 
 @Composable
 fun FacultyLoginForm(navController: NavController) {

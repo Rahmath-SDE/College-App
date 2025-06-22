@@ -31,6 +31,18 @@ import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun StudentLoginPage(navController: NavController) {
+    val context = LocalContext.current
+
+    // ✅ Persistent login redirect
+    LaunchedEffect(Unit) {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user != null) {
+            navController.navigate("studentHome") {
+                popUpTo("studentLogin") { inclusive = true }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -69,8 +81,8 @@ fun StudentLoginPage(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
-            verticalArrangement = Arrangement.Center, // Centers content vertically
-            horizontalAlignment = Alignment.CenterHorizontally // Centers content horizontally
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 imageVector = Icons.Default.AccountCircle,
@@ -93,6 +105,7 @@ fun StudentLoginPage(navController: NavController) {
         }
     }
 }
+
 
 
 

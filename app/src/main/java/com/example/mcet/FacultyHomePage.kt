@@ -1,8 +1,12 @@
 package com.example.mcet
 
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,20 +20,53 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.launch
-
-
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacultyHomePage(navController: NavController) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // 🔙 Handle back button
+    BackHandler {
+        showExitDialog = true
+    }
+
+    // 🔔 Exit confirmation dialog
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("Exit App") },
+            text = { Text("Do you want to exit the app?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog = false
+                    // Exit the app
+                    kotlin.system.exitProcess(0)
+                }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -62,9 +99,7 @@ fun FacultyHomePage(navController: NavController) {
             }
         )
     }
-
 }
-
 
 
 @Composable
@@ -112,6 +147,10 @@ fun FacultyDashboardContent(padding: PaddingValues, navController: NavController
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            AttendanceCalendar()
+
+            Spacer(modifier = Modifier.height(32.dp))
+
             FacultyProfiles()
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -120,6 +159,273 @@ fun FacultyDashboardContent(padding: PaddingValues, navController: NavController
         }
     }
 }
+
+
+
+
+@Composable
+fun AttendanceCalendar() {
+    val calendar = Calendar.getInstance()
+    val currentMonth = remember { mutableStateOf(calendar.get(Calendar.MONTH)) }
+    val currentYear = remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
+    val database = FirebaseDatabase.getInstance().reference
+    val context = LocalContext.current
+
+    val showDialog = remember { mutableStateOf(false) }
+    val selectedDate = remember { mutableStateOf("") }
+    val showEventDialog = remember { mutableStateOf(false) }
+    val showAttendanceDialog = remember { mutableStateOf(false) }
+    val inputText = remember { mutableStateOf("") }
+
+    val eventDates = remember { mutableStateListOf<String>() }
+    val eventTitles = remember { mutableStateMapOf<String, List<String>>() }
+
+    val showEventInfoDialog = remember { mutableStateOf(false) }
+    val selectedEventList = remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // ✅ Fetch events to highlight on calendar
+    LaunchedEffect(Unit) {
+        database.child("events").get().addOnSuccessListener {
+            it.children.forEach { snap ->
+                val dateKey = snap.key ?: return@forEach
+                eventDates.add(dateKey)
+
+                val titles = snap.children.mapNotNull { it.child("title").getValue(String::class.java) }
+                eventTitles[dateKey] = titles
+            }
+        }
+    }
+
+    val daysOfWeek = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.9f))
+            .padding(16.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            IconButton(onClick = {
+                if (currentMonth.value == 0) {
+                    currentMonth.value = 11
+                    currentYear.value -= 1
+                } else {
+                    currentMonth.value -= 1
+                }
+            }) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month")
+            }
+
+            Text(
+                text = SimpleDateFormat("MMMM yyyy").format(
+                    GregorianCalendar(currentYear.value, currentMonth.value, 1).time
+                ),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            IconButton(onClick = {
+                if (currentMonth.value == 11) {
+                    currentMonth.value = 0
+                    currentYear.value += 1
+                } else {
+                    currentMonth.value += 1
+                }
+            }) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(Modifier.fillMaxWidth()) {
+            daysOfWeek.forEach {
+                Text(
+                    text = it,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val firstDayOfMonth = Calendar.getInstance().apply {
+            set(Calendar.YEAR, currentYear.value)
+            set(Calendar.MONTH, currentMonth.value)
+            set(Calendar.DAY_OF_MONTH, 1)
+        }
+        val startDayOfWeek = firstDayOfMonth.get(Calendar.DAY_OF_WEEK) - 1
+        val totalDaysInMonth = firstDayOfMonth.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val totalCells = startDayOfWeek + totalDaysInMonth
+
+        LazyVerticalGrid(columns = GridCells.Fixed(7), modifier = Modifier.fillMaxWidth()) {
+            items(totalCells) { index ->
+                if (index < startDayOfWeek) {
+                    Box(modifier = Modifier.size(48.dp)) {}
+                } else {
+                    val day = index - startDayOfWeek + 1
+                    val dateKey = String.format("%04d-%02d-%02d", currentYear.value, currentMonth.value + 1, day)
+                    val isEventDay = dateKey in eventDates
+
+                    Box(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (isEventDay) Color(0xFFFFF59D) else Color(0xFFE0F7FA)
+                            )
+                            .clickable {
+                                if (isEventDay) {
+                                    selectedEventList.value = eventTitles[dateKey] ?: emptyList()
+                                    showEventInfoDialog.value = true
+                                } else {
+                                    selectedDate.value = dateKey
+                                    showDialog.value = true
+                                }
+                            }
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("$day")
+                    }
+                }
+            }
+        }
+
+        // 🔹 Dialog: Event Options (Mark Attendance / Add Event)
+        if (showDialog.value) {
+            AlertDialog(
+                onDismissRequest = { showDialog.value = false },
+                title = { Text("Actions for ${selectedDate.value}") },
+                text = {
+                    Column {
+                        Button(onClick = {
+                            showDialog.value = false
+                            showAttendanceDialog.value = true
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Mark Attendance")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = {
+                            showDialog.value = false
+                            showEventDialog.value = true
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Add Event")
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {}
+            )
+        }
+
+        // 🔹 Dialog: Mark Attendance
+        if (showAttendanceDialog.value) {
+            AlertDialog(
+                onDismissRequest = { showAttendanceDialog.value = false },
+                title = { Text("Mark Attendance") },
+                text = {
+                    OutlinedTextField(
+                        value = inputText.value,
+                        onValueChange = { inputText.value = it },
+                        label = { Text("Enter Student Email") }
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (inputText.value.isNotEmpty()) {
+                            val studentEmailKey = inputText.value.replace(".", "_")
+                            database.child("attendance").child(studentEmailKey).child(selectedDate.value)
+                                .setValue(true)
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Attendance marked successfully!", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Failed to mark attendance.", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                        inputText.value = ""
+                        showAttendanceDialog.value = false
+                    }) {
+                        Text("Mark")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAttendanceDialog.value = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // 🔹 Dialog: Add Event
+        if (showEventDialog.value) {
+            AlertDialog(
+                onDismissRequest = { showEventDialog.value = false },
+                title = { Text("Add Event") },
+                text = {
+                    OutlinedTextField(
+                        value = inputText.value,
+                        onValueChange = { inputText.value = it },
+                        label = { Text("Enter Event Title") }
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (inputText.value.isNotEmpty()) {
+                            database.child("events").child(selectedDate.value)
+                                .push().setValue(mapOf("title" to inputText.value))
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Event added!", Toast.LENGTH_SHORT).show()
+                                    eventDates.add(selectedDate.value)
+                                    eventTitles[selectedDate.value] =
+                                        (eventTitles[selectedDate.value] ?: emptyList()) + inputText.value
+                                }
+                        }
+                        inputText.value = ""
+                        showEventDialog.value = false
+                    }) {
+                        Text("Add")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEventDialog.value = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // 🔹 Dialog: Show Event Info
+        if (showEventInfoDialog.value) {
+            AlertDialog(
+                onDismissRequest = { showEventInfoDialog.value = false },
+                title = { Text("Events") },
+                text = {
+                    Column {
+                        selectedEventList.value.forEach {
+                            Text("• $it", fontSize = 16.sp)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showEventInfoDialog.value = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+    }
+}
+
+
 
 @Composable
 fun FacultyProfiles() {
